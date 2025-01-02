@@ -1,3 +1,5 @@
 .idea
 build
 parser
+.DS_Store
+src/.DS_Store

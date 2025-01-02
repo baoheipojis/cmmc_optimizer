@@ -9,5 +9,8 @@
         "unordered_map": "c",
         "unordered_set": "c",
         "vector": "c",
-    }
+    },
+    // "clangd.arguments": [
+    //     "--compile-commands-dir=/Users/pojis/Library/CloudStorage/OneDrive-南京大学/大三上课程/Principles and Techniques of Compilers/experiment/lab5/cmmc_optimizer"
+    // ]
 }

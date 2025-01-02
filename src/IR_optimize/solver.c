@@ -70,20 +70,56 @@ static void worklistDoSolveForward(DataflowAnalysis *t, IR_function *func) {
 
 //// ============================ Backward ============================
 
-/* TODO:
- * 根据前向求解器的实现，完成后向求解器的实现
- */
-
 static void initializeBackward(DataflowAnalysis *t, IR_function *func) {
-    TODO();
+    for_list(IR_block_ptr, i, func->blocks) {
+        void *new_in_fact = VCALL(*t, newInitialFact);
+        VCALL(*t, setInFact, i->val, new_in_fact);
+        if(i->val == func->exit) {
+            void *exit_fact = VCALL(*t, newBoundaryFact, func);
+            VCALL(*t, setOutFact, i->val, exit_fact);
+        } else {
+            void *new_out_fact = VCALL(*t, newInitialFact);
+            VCALL(*t, setOutFact, i->val, new_out_fact);
+        }
+    }
 }
 
 static void iterativeDoSolveBackward(DataflowAnalysis *t, IR_function *func) {
-    TODO();
+    while(true) {
+        bool updated = false;
+        for_list(IR_block_ptr, i, func->blocks) {
+            IR_block *blk = i->val;
+            Fact *in_fact = VCALL(*t, getInFact, blk), *out_fact = VCALL(*t, getOutFact, blk);
+            // out = meetAll(in of successors)
+            for_list(IR_block_ptr, j, *VCALL(func->blk_succ, get, blk)) {
+                Fact *succ_in = VCALL(*t, getInFact, j->val);
+                VCALL(*t, meetInto, succ_in, out_fact);
+            }
+            if(VCALL(*t, transferBlock, blk, out_fact, in_fact))
+                updated = true;
+        }
+        if(!updated) break;
+    }
 }
 
 static void worklistDoSolveBackward(DataflowAnalysis *t, IR_function *func) {
-    TODO();
+    List_IR_block_ptr worklist;
+    List_IR_block_ptr_init(&worklist);
+    for_list(IR_block_ptr, i, func->blocks)
+        VCALL(worklist, push_back, i->val);
+    while(worklist.head) {
+        IR_block *blk = worklist.head->val;
+        VCALL(worklist, pop_front);
+        Fact *in_fact = VCALL(*t, getInFact, blk), *out_fact = VCALL(*t, getOutFact, blk);
+        for_list(IR_block_ptr, i, *VCALL(func->blk_succ, get, blk)) {
+            Fact *succ_in = VCALL(*t, getInFact, i->val);
+            VCALL(*t, meetInto, succ_in, out_fact);
+        }
+        if(VCALL(*t, transferBlock, blk, out_fact, in_fact))
+            for_list(IR_block_ptr, i, *VCALL(func->blk_pred, get, blk))
+                VCALL(worklist, push_back, i->val);
+    }
+    List_IR_block_ptr_teardown(&worklist);
 }
 
 //// ============================ Solver ============================
