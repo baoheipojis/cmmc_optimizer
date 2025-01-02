@@ -15,8 +15,8 @@ static void LiveVariableAnalysis_teardown(LiveVariableAnalysis *t) {
     Map_IR_block_ptr_Set_ptr_IR_var_teardown(&t->mapOutFact);
 }
 
-static bool
-LiveVariableAnalysis_isForward (LiveVariableAnalysis *t) {
+static bool LiveVariableAnalysis_isForward(LiveVariableAnalysis *t) {
+    // 我们知道活性变量分析是反向的，所以这里直接返回 false。
     return false;
 }
 
@@ -54,22 +54,24 @@ LiveVariableAnalysis_getOutFact (LiveVariableAnalysis *t, IR_block *blk) {
     return VCALL(t->mapOutFact, get, blk);
 }
 
-static bool
-LiveVariableAnalysis_meetInto (LiveVariableAnalysis *t,
-                               Set_IR_var *fact,
-                               Set_IR_var *target) {
+static bool LiveVariableAnalysis_meetInto(LiveVariableAnalysis *t,
+                                          Set_IR_var *fact,
+                                          Set_IR_var *target) {
+    // 这里让我们选是用union还是intersect。当然是要用union了。out = meetAll(in of successors)。这里的out就是target，in就是fact。
     bool changed = VCALL(*target, union_with, fact);
     return changed;
 }
 
-void LiveVariableAnalysis_transferStmt (LiveVariableAnalysis *t,
-                                        IR_stmt *stmt,
-                                        Set_IR_var *fact) {
+void LiveVariableAnalysis_transferStmt(LiveVariableAnalysis *t, IR_stmt *stmt,
+                                       Set_IR_var *fact) {
+    // in = use ∪ (out - def)，其中in是fact新值，out是fact旧值。
     IR_var def = VCALL(*stmt, get_def);
     IR_use use = VCALL(*stmt, get_use_vec);
     // kill
-    if(def != IR_VAR_NONE)
-        VCALL(*fact, erase, def);
+    if (def != IR_VAR_NONE) {
+    //   从fact中删除def
+      VCALL(*fact, delete, def);
+    }
     // gen
     for(unsigned i = 0; i < use.use_cnt; i++) {
         IR_val use_val = use.use_vec[i];
@@ -148,7 +150,9 @@ static bool block_remove_dead_def (LiveVariableAnalysis *t, IR_block *blk) {
         if(stmt->stmt_type == IR_OP_STMT || stmt->stmt_type == IR_ASSIGN_STMT) {
             IR_var def = VCALL(*stmt, get_def);
             if(def == IR_VAR_NONE) continue;
-            if(!VCALL(*new_out_fact, exist, def)) {
+            if (!VCALL(*new_out_fact, exist, def)) {
+              //   如果def不在new_out_fact中，说明def不再活跃，那么就可以删除这个赋值语句了。
+            //   前提是没有副作用，不过看样子本次实验用不着关心这个。
                 stmt->dead = true;
                 updated = true;
             }
