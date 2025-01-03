@@ -6,18 +6,29 @@
 
 
 static CPValue meetValue(CPValue v1, CPValue v2) {
+//   如果其中一个是UNDEF，那么结果就是另一个
     if(v1.kind == UNDEF) return v2;
-    if(v2.kind == UNDEF) return v1;
+    if (v2.kind == UNDEF) return v1;
+    // 只要有一个是NAC, 结果就是NAC
     if(v1.kind == NAC || v2.kind == NAC) return get_NAC();
-    // both CONST
+    // 如果两个都是常量，那么它们相等的话，就是这个常量，不等就是NAC
     if(v1.const_val == v2.const_val) return v1;
     return get_NAC();
 }
 
 static CPValue calculateValue(IR_OP_TYPE IR_op_type, CPValue v1, CPValue v2) {
-    if(v1.kind == NAC || v2.kind == NAC) return get_NAC();
+    // 这里对应了软分实验中的evaluate。
+    // 首先处理几个特殊情况：
+    // 除0肯定是UNDEF
+    if (v2.kind == CONST && v2.const_val == 0 && (IR_op_type == IR_OP_DIV))
+      return get_UNDEF();
+    // 如果其中一个是NAC，那么结果就是NAC
+    if (v1.kind == NAC || v2.kind == NAC) {
+      return get_NAC();
+    }
+    // 如果其中一个是UNDEF，那么结果就是UNDEF
     if(v1.kind == UNDEF || v2.kind == UNDEF) return get_UNDEF();
-    // both CONST
+    // 下面只剩下两个都是CONST的情况了
     int res_const;
     switch (IR_op_type) {
         case IR_OP_ADD: res_const = v1.const_val + v2.const_val; break;
@@ -82,6 +93,7 @@ static Map_IR_var_CPValue*
 ConstantPropagation_newBoundaryFact (ConstantPropagation *t, IR_function *func) {
     Map_IR_var_CPValue *fact = NEW(Map_IR_var_CPValue);
     for_vec(IR_var, param_ptr, func->params)
+        // 初始化为NAC，这是显然的。因为如果变成Undef，那么Undef meet C = C，显然不合理
         VCALL(*fact, set, *param_ptr, get_NAC());
     return fact;
 }
@@ -132,12 +144,14 @@ void ConstantPropagation_transferStmt (ConstantPropagation *t,
         IR_assign_stmt *assign_stmt = (IR_assign_stmt*)stmt;
         IR_var def = assign_stmt->rd;
         CPValue use_val = Fact_get_value_from_IR_val(fact, assign_stmt->rs);
+        // 如果是赋值语句，那么直接更新def的值就好了。
         Fact_update_value(fact, def, use_val);
     } else if(stmt->stmt_type == IR_OP_STMT) {
         IR_op_stmt *op_stmt = (IR_op_stmt*)stmt;
         IR_var def = op_stmt->rd;
         CPValue rs1_val = Fact_get_value_from_IR_val(fact, op_stmt->rs1);
         CPValue rs2_val = Fact_get_value_from_IR_val(fact, op_stmt->rs2);
+        // 上面的rs表示操作数。这里就是计算操作数的值，然后更新def的值。
         CPValue new_val = calculateValue(op_stmt->op, rs1_val, rs2_val);
         Fact_update_value(fact, def, new_val);
     } else { // Other Stmt with new_def
