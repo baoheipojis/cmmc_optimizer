@@ -30,19 +30,22 @@ static void CopyPropagation_teardown(CopyPropagation *t) {
 static bool
 CopyPropagation_isForward (CopyPropagation *t) {
     // TODO: isForward?
-    TODO();
+    // TODO();
+    return true;
 }
 
 static Fact_def_use*
 CopyPropagation_newBoundaryFact (CopyPropagation *t, IR_function *func) {
     // TODO: return NEW(Fact_def_use, is_top?);
-    TODO();
+    // TODO();
+    return NEW(Fact_def_use, false);
 }
 
 static Fact_def_use*
 CopyPropagation_newInitialFact (CopyPropagation *t) {
     // TODO: return NEW(Fact_def_use, is_top?);
-    TODO();
+    // TODO();
+    return NEW(Fact_def_use, false);
 }
 
 static void
@@ -99,27 +102,23 @@ CopyPropagation_meetInto (CopyPropagation *t,
     return updated;
 }
 
-void CopyPropagation_transferStmt (CopyPropagation *t,
-                                   IR_stmt *stmt,
-                                   Fact_def_use *fact) {
+void CopyPropagation_transferStmt(CopyPropagation *t, IR_stmt *stmt,
+                                  Fact_def_use *fact) {
+    // 假设这条语句是 x = y。
     IR_var new_def = VCALL(*stmt, get_def);
     //// copy_kill
     if(new_def != IR_VAR_NONE) {
         if(VCALL(fact->def_to_use, exist, new_def)) {
             IR_var use = VCALL(fact->def_to_use, get, new_def);
-            /* TODO:
-             * use is killed by new_def
-             * VCALL(fact->def_to_use/use_to_def?, delete, use/new_def?);
-             */ 
-            TODO();
+            // 由于复制传播的特性，一个def只可能有一个use。那么就分别把它们都删掉就行了
+            VCALL(fact->def_to_use, delete, new_def);
+            VCALL(fact->use_to_def, delete, use);
         }
         if(VCALL(fact->use_to_def, exist, new_def)) {
             IR_var def = VCALL(fact->use_to_def, get, new_def);
-            /* TODO:
-             * def is killed by new_def
-             * VCALL(fact->def_to_use/use_to_def?, delete, def/new_def?);
-             */ 
-            TODO();
+            // 之后还要检查一下这个def有没有被use。像z = x 这种也会被kill掉
+            VCALL(fact->use_to_def, delete, new_def);
+            VCALL(fact->def_to_use, delete, def);
         }
     }
     //// copy_gen
@@ -127,11 +126,9 @@ void CopyPropagation_transferStmt (CopyPropagation *t,
         IR_assign_stmt *assign_stmt = (IR_assign_stmt*)stmt;
         if(!assign_stmt->rs.is_const) {
             IR_var def = assign_stmt->rd, use = assign_stmt->rs.var;
-            /* TODO:
-             * def is killed by new_def
-             * VCALL(fact->def_to_use/use_to_def?, set, def/use?);
-             */ 
-            TODO();
+            // 把def和use加入fact
+            VCALL(fact->def_to_use, set, def, use);
+            VCALL(fact->use_to_def, set, use, def);
         }
     }
 }
