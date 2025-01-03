@@ -58,7 +58,10 @@ AvailableExpressionsAnalysis_newBoundaryFact (AvailableExpressionsAnalysis *t, I
      * OutFact[Entry] = (Bottom: empty set) / (Top: universal set) / other?
      * return NEW(Fact_set_var, is_top?);
      */
-    TODO();
+    // TODO();
+    // 在可用表达式分析中，首先把所有集合都定为空集。
+    // 这里的第二个参数是is_top，显然，我们应该设为false。
+    return NEW(Fact_set_var, false);
 }
 
 static Fact_set_var*
@@ -68,7 +71,9 @@ AvailableExpressionsAnalysis_newInitialFact (AvailableExpressionsAnalysis *t) {
      * InitFact = (Bottom: empty set) / (Top: universal set) / other?
      * return NEW(Fact_set_var, is_top?);
      */
-    TODO();
+    // TODO();
+    // 和上面那个函数一样，这里的第二个参数也是false。
+    return NEW(Fact_set_var, false);
 }
 
 static void
@@ -112,7 +117,9 @@ AvailableExpressionsAnalysis_meetInto (AvailableExpressionsAnalysis *t,
      * IN[blk] = union_with / intersect_with (all OUT[pred_blk]) ?
      * return VCALL(target->set, union_with / intersect_with, &fact->set);
      */
-    TODO();
+    // TODO();
+    // 显然，可用表达式分析是求交集的。
+    return VCALL(target->set, intersect_with, &fact->set);
 }
 
 void AvailableExpressionsAnalysis_transferStmt (AvailableExpressionsAnalysis *t,
